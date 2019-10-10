@@ -16,6 +16,7 @@ import reactor.kafka.sender.SenderRecord;
 @Service
 @RequiredArgsConstructor
 public class ApiRestService {
+	private static final String KEY = "matches";
 
 	private final ReactiveRedisTemplate<String, Match> matchReactiveRedisTemplate;
 	private final KafkaSender<String, String> kafkaSender;
@@ -27,18 +28,29 @@ public class ApiRestService {
 
 
 	public Mono<Match> findMatchById(Long id) {
-		//TODO - fix this
-
+		return reactiveMatchHashOperations().get(KEY, id.toString());
 	}
 
 	public Mono<String> saveMatchDetails(Match match) {
-		//TODO - fix this
-
+		return reactiveMatchHashOperations().put(KEY, match.getMatchId().toString(), match)
+				.log()
+				//.filter(aBoolean -> aBoolean == true)
+				.flatMap(aBoolean -> {
+					return kafkaSender.send(Mono.just(matchToSenderRecord(match)))
+							.next()
+							.log()
+							.map(longSenderResult -> longSenderResult.exception() == null);
+				})
+				.map(aBoolean -> aBoolean ? "OK": "NOK");
 	}
 
-	private ReactiveHashOperations<String, String, Match> reactiveMatchHashOperations() {
-		return matchReactiveRedisTemplate.<String, Match>opsForHash();
-	}
+	/* hint for sending a record of Match entity to Kafka
+						kafkaSender.send(Mono.just(matchToSenderRecord(match)))
+								.next()
+								.log()
+								.map(longSenderResult -> longSenderResult.exception() == null)
+
+	 */
 
 	private SenderRecord<String, String, Long> matchToSenderRecord(Match match) {
 		final String matchJsonStr;
@@ -50,4 +62,10 @@ public class ApiRestService {
 
 		return SenderRecord.create(new ProducerRecord<String, String>(topicName, matchJsonStr), match.getMatchId());
 	}
+
+	private ReactiveHashOperations<String, String, Match> reactiveMatchHashOperations() {
+		return matchReactiveRedisTemplate.<String, Match>opsForHash();
+	}
+
+
 }
