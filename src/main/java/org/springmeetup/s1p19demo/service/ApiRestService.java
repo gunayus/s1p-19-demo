@@ -25,30 +25,19 @@ public class ApiRestService {
 	@Value("${kafka.livescore.topic}")
 	String topicName;
 
-	private ReactiveHashOperations<String, String, Match> reactiveMatchHashOperations() {
-		return matchReactiveRedisTemplate.<String, Match>opsForHash();
-	}
-
 
 	public Mono<Match> findMatchById(Long id) {
-		return reactiveMatchHashOperations()
-				.get("matches", id.toString())
-				.switchIfEmpty(Mono.error(new IllegalArgumentException("unable to find a match with id : " + id)));
+		//TODO - fix this
+
 	}
 
 	public Mono<String> saveMatchDetails(Match match) {
+		//TODO - fix this
 
-		final SenderRecord<String, String, Long> senderRecord = matchToSenderRecord(match);
+	}
 
-		return reactiveMatchHashOperations()
-				.put("matches", match.getMatchId().toString(), match)
-				.then(
-						kafkaSender.send(Mono.just(senderRecord))
-							.next()
-							.log()
-							.map(longSenderResult -> longSenderResult.exception() == null)
-				)
-				.map(aBoolean -> aBoolean ? "OK": "NOK");
+	private ReactiveHashOperations<String, String, Match> reactiveMatchHashOperations() {
+		return matchReactiveRedisTemplate.<String, Match>opsForHash();
 	}
 
 	private SenderRecord<String, String, Long> matchToSenderRecord(Match match) {

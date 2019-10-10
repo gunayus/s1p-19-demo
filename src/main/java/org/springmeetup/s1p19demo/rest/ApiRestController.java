@@ -35,17 +35,7 @@ public class ApiRestController {
 
 	@GetMapping(value = "/match/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<ServerSentEvent<Match>> streamMatchEvents(@PathVariable("id") Long id) {
-		return kafkaService.getEventPublisher()
-				.log()
-				.map(stringServerSentEvent -> {
-					Match match = jsonStrToMatch(stringServerSentEvent.data());
-
-					return ServerSentEvent.<Match>builder()
-							.data(match)
-							.build();
-				})
-				.log()
-				.filter(matchServerSentEvent -> matchServerSentEvent.data().getMatchId().equals(id));
+		//TODO - fix this
 	}
 
 	private Match jsonStrToMatch(String jsonStr) {
