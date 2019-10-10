@@ -3,6 +3,7 @@ package org.springmeetup.s1p19demo.redis;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springmeetup.s1p19demo.model.Match;
 
 @Configuration
+@RequiredArgsConstructor
 public class RedisConfiguration {
 
 	@Value("${spring.redis.hostname}")
@@ -27,6 +29,7 @@ public class RedisConfiguration {
 	@Value("${spring.redis.password}")
 	String password;
 
+	private final ObjectMapper objectMapper;
 
 	@Bean
 	public ReactiveRedisConnectionFactory reactiveRedisConnectionFactory() {
@@ -48,10 +51,6 @@ public class RedisConfiguration {
 	}
 
 	public <T> Jackson2JsonRedisSerializer<T> configureJackson2JsonRedisSerializer(Class<T> t) {
-		ObjectMapper objectMapper = new ObjectMapper()
-				.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-		objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.KEBAB_CASE);
-
 		Jackson2JsonRedisSerializer<T> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(t);
 		jackson2JsonRedisSerializer.setObjectMapper(objectMapper);
 

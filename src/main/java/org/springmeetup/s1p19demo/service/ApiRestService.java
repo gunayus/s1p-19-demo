@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveHashOperations;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -19,38 +20,45 @@ public class ApiRestService {
 	private final ReactiveRedisTemplate<String, Match> matchReactiveRedisTemplate;
 	private final KafkaSender<String, String> kafkaSender;
 
-	private ReactiveHashOperations<String, String, Match> matchReactiveHashOperations() {
+	private final ObjectMapper objectMapper;
+
+	@Value("${kafka.livescore.topic}")
+	String topicName;
+
+	private ReactiveHashOperations<String, String, Match> reactiveMatchHashOperations() {
 		return matchReactiveRedisTemplate.<String, Match>opsForHash();
 	}
 
+
 	public Mono<Match> findMatchById(Long id) {
-		return matchReactiveHashOperations().get("matches", id.toString());
+		return reactiveMatchHashOperations()
+				.get("matches", id.toString())
+				.switchIfEmpty(Mono.error(new IllegalArgumentException("unable to find a match with id : " + id)));
 	}
 
 	public Mono<String> saveMatchDetails(Match match) {
-		final String matchStr;
-		try {
-			ObjectMapper objectMapper = new ObjectMapper();
-			objectMapper.setPropertyNamingStrategy(new PropertyNamingStrategy.KebabCaseStrategy());
 
-			matchStr = objectMapper.writeValueAsString(match);
+		final SenderRecord<String, String, Long> senderRecord = matchToSenderRecord(match);
+
+		return reactiveMatchHashOperations()
+				.put("matches", match.getMatchId().toString(), match)
+				.then(
+						kafkaSender.send(Mono.just(senderRecord))
+							.next()
+							.log()
+							.map(longSenderResult -> longSenderResult.exception() == null)
+				)
+				.map(aBoolean -> aBoolean ? "OK": "NOK");
+	}
+
+	private SenderRecord<String, String, Long> matchToSenderRecord(Match match) {
+		final String matchJsonStr;
+		try {
+			matchJsonStr = objectMapper.writeValueAsString(match);
 		} catch (Exception ex) {
 			throw new RuntimeException(ex);
 		}
 
-		final SenderRecord<String, String, Long> senderRecord =
-				SenderRecord.create(new ProducerRecord<String, String>("live-score-topic", matchStr), match.getMatchId());
-
-		return matchReactiveHashOperations().put("matches", match.getMatchId().toString(), match)
-				.then(
-						kafkaSender.send(Mono.just(senderRecord))
-								.next()
-								.doOnNext(longSenderResult -> System.out.println(longSenderResult.recordMetadata()))
-								.map(longSenderResult -> true)
-				)
-				.map(hashOperationResult -> hashOperationResult ? "OK" : "NOK")
-				.onErrorResume(throwable -> Mono.just("EXCEPTION : " + throwable.getMessage()))
-				;
+		return SenderRecord.create(new ProducerRecord<String, String>(topicName, matchJsonStr), match.getMatchId());
 	}
-
 }
