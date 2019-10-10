@@ -16,6 +16,7 @@ import reactor.kafka.sender.SenderRecord;
 @Service
 @RequiredArgsConstructor
 public class ApiRestService {
+	private static final String KEY = "matches";
 
 	private final ReactiveRedisTemplate<String, Match> matchReactiveRedisTemplate;
 	private final KafkaSender<String, String> kafkaSender;
@@ -25,31 +26,31 @@ public class ApiRestService {
 	@Value("${kafka.livescore.topic}")
 	String topicName;
 
-	private ReactiveHashOperations<String, String, Match> reactiveMatchHashOperations() {
-		return matchReactiveRedisTemplate.<String, Match>opsForHash();
-	}
-
 
 	public Mono<Match> findMatchById(Long id) {
-		return reactiveMatchHashOperations()
-				.get("matches", id.toString())
-				.switchIfEmpty(Mono.error(new IllegalArgumentException("unable to find a match with id : " + id)));
+		return reactiveMatchHashOperations().get(KEY, id.toString());
 	}
 
 	public Mono<String> saveMatchDetails(Match match) {
-
-		final SenderRecord<String, String, Long> senderRecord = matchToSenderRecord(match);
-
-		return reactiveMatchHashOperations()
-				.put("matches", match.getMatchId().toString(), match)
-				.then(
-						kafkaSender.send(Mono.just(senderRecord))
+		return reactiveMatchHashOperations().put(KEY, match.getMatchId().toString(), match)
+				.log()
+				//.filter(aBoolean -> aBoolean == true)
+				.flatMap(aBoolean -> {
+					return kafkaSender.send(Mono.just(matchToSenderRecord(match)))
 							.next()
 							.log()
-							.map(longSenderResult -> longSenderResult.exception() == null)
-				)
+							.map(longSenderResult -> longSenderResult.exception() == null);
+				})
 				.map(aBoolean -> aBoolean ? "OK": "NOK");
 	}
+
+	/* hint for sending a record of Match entity to Kafka
+						kafkaSender.send(Mono.just(matchToSenderRecord(match)))
+								.next()
+								.log()
+								.map(longSenderResult -> longSenderResult.exception() == null)
+
+	 */
 
 	private SenderRecord<String, String, Long> matchToSenderRecord(Match match) {
 		final String matchJsonStr;
@@ -61,4 +62,10 @@ public class ApiRestService {
 
 		return SenderRecord.create(new ProducerRecord<String, String>(topicName, matchJsonStr), match.getMatchId());
 	}
+
+	private ReactiveHashOperations<String, String, Match> reactiveMatchHashOperations() {
+		return matchReactiveRedisTemplate.<String, Match>opsForHash();
+	}
+
+
 }
