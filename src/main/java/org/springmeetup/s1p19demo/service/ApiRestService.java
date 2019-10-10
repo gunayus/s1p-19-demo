@@ -28,29 +28,12 @@ public class ApiRestService {
 
 
 	public Mono<Match> findMatchById(Long id) {
-		return reactiveMatchHashOperations().get(KEY, id.toString());
+		return Mono.empty();
 	}
 
 	public Mono<String> saveMatchDetails(Match match) {
-		return reactiveMatchHashOperations().put(KEY, match.getMatchId().toString(), match)
-				.log()
-				//.filter(aBoolean -> aBoolean == true)
-				.flatMap(aBoolean -> {
-					return kafkaSender.send(Mono.just(matchToSenderRecord(match)))
-							.next()
-							.log()
-							.map(longSenderResult -> longSenderResult.exception() == null);
-				})
-				.map(aBoolean -> aBoolean ? "OK": "NOK");
+		return Mono.empty();
 	}
-
-	/* hint for sending a record of Match entity to Kafka
-						kafkaSender.send(Mono.just(matchToSenderRecord(match)))
-								.next()
-								.log()
-								.map(longSenderResult -> longSenderResult.exception() == null)
-
-	 */
 
 	private SenderRecord<String, String, Long> matchToSenderRecord(Match match) {
 		final String matchJsonStr;
@@ -67,5 +50,29 @@ public class ApiRestService {
 		return matchReactiveRedisTemplate.<String, Match>opsForHash();
 	}
 
+
+	/* hint for sending a record of Match entity to Kafka
+						kafkaSender.send(Mono.just(matchToSenderRecord(match)))
+								.next()
+								.log()
+								.map(longSenderResult -> longSenderResult.exception() == null)
+
+	 */
+
+
+
+	/* hint for saving match in Redis and sending match event to Kafka
+		return reactiveMatchHashOperations().put(KEY, match.getMatchId().toString(), match)
+				.log()
+				//.filter(aBoolean -> aBoolean == true)
+				.flatMap(aBoolean -> {
+					return kafkaSender.send(Mono.just(matchToSenderRecord(match)))
+							.next()
+							.log()
+							.map(longSenderResult -> longSenderResult.exception() == null);
+				})
+				.map(aBoolean -> aBoolean ? "OK": "NOK");
+
+	 */
 
 }
