@@ -13,6 +13,8 @@ import org.springmeetup.s1p19demo.service.ApiRestService;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+
 @RestController
 @RequiredArgsConstructor
 @Slf4j
@@ -45,6 +47,12 @@ public class ApiRestController {
 				.build();
 	}
 
+	private ServerSentEvent<Match> toHeartBeatServerSentEvent(Long tick) {
+		return matchToServerSentEvent(Match.builder()
+				.matchId(0l)
+				.name("Heart-Beat-Match-"+ tick).build());
+	}
+
 	private Match jsonStrToMatch(String jsonStr) {
 		Match match = null;
 		try {
@@ -57,14 +65,5 @@ public class ApiRestController {
 		return match;
 	}
 
-
-	/*
-		return kafkaService.getEventPublisher()
-				.map(stringServerSentEvent -> jsonStrToMatch(stringServerSentEvent.data()))
-				.filter(match -> match != null)
-				.map(this::matchToServerSentEvent)
-				.filter(matchServerSentEvent -> matchServerSentEvent.data().getMatchId().equals(id))
-
-	 */
 
 }

@@ -50,29 +50,4 @@ public class ApiRestService {
 		return matchReactiveRedisTemplate.<String, Match>opsForHash();
 	}
 
-
-	/* hint for sending a record of Match entity to Kafka
-						kafkaSender.send(Mono.just(matchToSenderRecord(match)))
-								.next()
-								.log()
-								.map(longSenderResult -> longSenderResult.exception() == null)
-
-	 */
-
-
-
-	/* hint for saving match in Redis and sending match event to Kafka
-		return reactiveMatchHashOperations().put(KEY, match.getMatchId().toString(), match)
-				.log()
-				//.filter(aBoolean -> aBoolean == true)
-				.flatMap(aBoolean -> {
-					return kafkaSender.send(Mono.just(matchToSenderRecord(match)))
-							.next()
-							.log()
-							.map(longSenderResult -> longSenderResult.exception() == null);
-				})
-				.map(aBoolean -> aBoolean ? "OK": "NOK");
-
-	 */
-
 }
