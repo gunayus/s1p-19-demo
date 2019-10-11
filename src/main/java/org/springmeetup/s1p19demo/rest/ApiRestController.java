@@ -37,10 +37,18 @@ public class ApiRestController {
 
 	@GetMapping(value = "/match/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<ServerSentEvent<Match>> streamMatchEvents(@PathVariable("id") Long id) {
-		//TODO - fix here
-		return Flux.empty();
-	}
+		Flux<ServerSentEvent<Match>> heartbeatStream = Flux.interval(Duration.ofSeconds(10))
+				.take(10)
+				.map(this::toHeartBeatServerSentEvent);
 
+		return kafkaService.getEventPublisher()
+				.map(stringServerSentEvent -> jsonStrToMatch(stringServerSentEvent.data()))
+				.filter(match -> match != null)
+				.filter(match -> match.getMatchId().equals(id))
+				.map(this::matchToServerSentEvent)
+				.mergeWith(heartbeatStream)
+				;
+	}
 
 	private ServerSentEvent<Match> matchToServerSentEvent(Match match) {
 		return ServerSentEvent.<Match>builder()

@@ -28,13 +28,20 @@ public class ApiRestService {
 
 
 	public Mono<Match> findMatchById(Long id) {
-		//TODO - fix here
-		return Mono.empty();
+		return reactiveMatchHashOperations().get(KEY, id.toString());
 	}
 
 	public Mono<String> saveMatchDetails(Match match) {
-		//TODO - fix here
-		return Mono.empty();
+		return reactiveMatchHashOperations().put(KEY, match.getMatchId().toString(), match)
+				.log()
+				//.filter(aBoolean -> aBoolean == true)
+				.flatMap(aBoolean -> {
+					return kafkaSender.send(Mono.just(matchToSenderRecord(match)))
+							.next()
+							.log()
+							.map(longSenderResult -> longSenderResult.exception() == null);
+				})
+				.map(aBoolean -> aBoolean ? "OK": "NOK");
 	}
 
 	private SenderRecord<String, String, Long> matchToSenderRecord(Match match) {
