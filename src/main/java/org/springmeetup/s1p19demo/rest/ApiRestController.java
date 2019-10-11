@@ -37,6 +37,7 @@ public class ApiRestController {
 
 	@GetMapping(value = "/match/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<ServerSentEvent<Match>> streamMatchEvents(@PathVariable("id") Long id) {
+		//TODO - fix here
 		return Flux.empty();
 	}
 
