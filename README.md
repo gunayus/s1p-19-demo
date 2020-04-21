@@ -1,6 +1,20 @@
 # s1p-19-demo
 SpringOne platform 2019 conference - demo project
 
+run with docker-compose
+
+```
+./run.sh
+
+```
+URL for Swagger
+
+```
+http://localhost:2021/swagger-ui.html
+
+```
+
+
 run the application as a spring-boot app 
 
 ```
@@ -16,13 +30,13 @@ run DemoApplication.java as Java application
 for getting a Match info 
 
 ```
-curl -X GET http://localhost:8080/match/1
+curl -X GET http://localhost:2021/match/1
 ```
 
 for starting a Match's event stream 
 
 ```
-curl -X GET http://localhost:8080/match/1/stream
+curl -X GET http://localhost:2021/match/1/stream
 ```
 
 for posting a Match info for saving and feeding event streams
@@ -31,7 +45,7 @@ for getting a Match info
 
 ```
 curl -X POST \
-  http://localhost:8080/match \
+  http://localhost:2021/match \
   -H 'Content-Type: application/json' \
   -d '{
     "match-id": 1,

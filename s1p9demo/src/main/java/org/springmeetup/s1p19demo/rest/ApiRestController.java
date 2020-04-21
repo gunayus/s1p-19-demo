@@ -1,7 +1,7 @@
 package org.springmeetup.s1p19demo.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -66,7 +66,7 @@ public class ApiRestController {
 		Match match = null;
 		try {
 			match = objectMapper.readValue(jsonStr, Match.class);
-		} catch (Exception ex) {
+		} catch (IOException ex) {
 			log.error("parsing exception", ex);
 			return null;
 		}

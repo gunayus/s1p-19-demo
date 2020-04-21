@@ -1,0 +1,78 @@
+version: '3.3'
+services:
+    zookeeper:
+        image: wurstmeister/zookeeper
+        container_name: zookeeper
+        ports:
+            - '2181:2181'
+        networks:
+            - unicorn
+    kafka:
+        image: wurstmeister/kafka
+        build: ./kafka
+        container_name: kafka
+        ports:
+            - {target: '9094', published: '9094', protocol: tcp, mode: host}
+        environment:
+            
+          HOSTNAME_COMMAND: 'docker info | grep ^Name: | cut -d'' '' -f 2'
+          KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT'
+          KAFKA_ADVERTISED_LISTENERS: 'INSIDE://:9092,OUTSIDE://_{HOSTNAME_COMMAND}:9094'
+          KAFKA_LISTENERS: 'INSIDE://:9092,OUTSIDE://:9094'
+          KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+          KAFKA_PORT: '9092'
+          KAFKA_CREATE_TOPICS: 'live-score-topic:3:1,matchlog:3:1'
+        
+        volumes:
+          - '/var/run/docker.sock:/var/run/docker.sock'
+        networks:
+          - unicorn
+        
+        
+    prometheus:
+        image: prom/prometheus
+        container_name: prometheus
+        networks:
+            - unicorn
+        ports:
+            - '9090:9090'
+            
+            
+    redis:
+        image: 'bitnami/redis:latest'
+        container_name: redis
+        deploy:
+            replicas: 1
+        environment:
+            - ALLOW_EMPTY_PASSWORD=yes
+            - 'REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL'
+        labels:
+            kompose.service.type: nodeport
+        ports:
+            - '6379:6379'
+        networks:
+            - unicorn
+            
+            
+    s1p9demo:
+        image: s1p9demo
+        build: ./s1p9demo
+        container_name: s1p9demo
+        deploy:
+            replicas: 1
+        depends_on:
+            - redis
+            - kafka
+        links:
+            - redis
+            - kafka
+        ports:
+            - '2021:2021'
+        networks:
+            - unicorn
+            
+            
+networks:
+    unicorn:
+        driver: bridge

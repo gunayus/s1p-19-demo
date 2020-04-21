@@ -1,8 +1,6 @@
 package org.springmeetup.s1p19demo.redis;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -21,20 +19,20 @@ import org.springmeetup.s1p19demo.model.Match;
 public class RedisConfiguration {
 
 	@Value("${spring.redis.hostname}")
-	String hostname;
+	private String hostname;
 
 	@Value("${spring.redis.port}")
-	Integer port;
+	private Integer port;
 
-	@Value("${spring.redis.password}")
-	String password;
+//	@Value("${spring.redis.password}")
+//	String password;
 
 	private final ObjectMapper objectMapper;
 
 	@Bean
 	public ReactiveRedisConnectionFactory reactiveRedisConnectionFactory() {
 		RedisStandaloneConfiguration redisConfiguration = new RedisStandaloneConfiguration(hostname, port);
-		redisConfiguration.setPassword(password);
+		//redisConfiguration.setPassword(password);
 
 		return new LettuceConnectionFactory(redisConfiguration);
 	}
